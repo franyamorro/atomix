@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Netflix Clone</title>
+  <title>Netflix Clone Pro</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       font-family: Arial, sans-serif;
       background: #141414;
@@ -19,36 +20,44 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px 40px;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+      padding: 15px 40px;
+      background: rgba(0,0,0,0.9);
       z-index: 100;
     }
 
     .logo {
       color: #e50914;
-      font-size: 28px;
+      font-size: 24px;
       font-weight: bold;
     }
 
-    .hero {
-      height: 80vh;
-      background: url('https://image.tmdb.org/t/p/original/9yBVqNruk6Ykrwc32qrK2TIE5xw.jpg') center/cover;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      padding: 60px;
+    input {
+      padding: 8px;
+      border-radius: 4px;
+      border: none;
+      outline: none;
     }
 
-    .hero h1 {
-      font-size: 60px;
-      margin-bottom: 20px;
+    .hero {
+      margin-top: 60px;
+      height: 70vh;
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      align-items: flex-end;
+      padding: 40px;
+    }
+
+    .hero-content h1 {
+      font-size: 48px;
+      margin-bottom: 10px;
     }
 
     .buttons button {
       padding: 10px 20px;
       margin-right: 10px;
       border: none;
-      border-radius: 5px;
+      border-radius: 4px;
       cursor: pointer;
     }
 
@@ -70,18 +79,22 @@
     }
 
     .poster {
-      width: 150px;
+      min-width: 150px;
+      height: 225px;
+      flex-shrink: 0;
+      border-radius: 5px;
+      overflow: hidden;
       transition: transform 0.3s;
-      cursor: pointer;
-    }
-
-    .poster:hover {
-      transform: scale(1.2);
     }
 
     .poster img {
       width: 100%;
-      border-radius: 5px;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .poster:hover {
+      transform: scale(1.15);
     }
 
     ::-webkit-scrollbar { display: none; }
@@ -91,15 +104,10 @@
 
 <header>
   <div class="logo">NETFLIX</div>
+  <input type="text" id="search" placeholder="Buscar...">
 </header>
 
-<section class="hero">
-  <h1>Interstellar</h1>
-  <div class="buttons">
-    <button class="play">▶ Play</button>
-    <button class="info">Más info</button>
-  </div>
-</section>
+<section class="hero" id="hero"></section>
 
 <section class="row">
   <h2>Populares</h2>
@@ -107,24 +115,61 @@
 </section>
 
 <script>
-const movies = [
-  "qJ2tW6WMUDux911r6m7haRef0WH.jpg",
-  "rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",
-  "qmDpIHrmpJINaRKAfWQfftjCdyi.jpg",
-  "xBHvZcjRiWyobQ9kxBhO6B2dtRI.jpg",
-  "s3TBrRGB1iav7gFOCNx3H31MoES.jpg"
-];
+const API_KEY = "TU_API_KEY_AQUI";
+const BASE_URL = "https://api.themoviedb.org/3";
+const IMG_URL = "https://image.tmdb.org/t/p/original";
+const SEARCH_URL = `${BASE_URL}/search/movie?api_key=${API_KEY}&query=`;
+const POPULAR_URL = `${BASE_URL}/movie/popular?api_key=${API_KEY}`;
 
-const container = document.getElementById("movies");
+const moviesContainer = document.getElementById("movies");
+const hero = document.getElementById("hero");
+const search = document.getElementById("search");
 
-movies.forEach(img => {
-  const div = document.createElement("div");
-  div.classList.add("poster");
+async function getMovies(url) {
+  const res = await fetch(url);
+  const data = await res.json();
+  showMovies(data.results);
+  setHero(data.results[0]);
+}
 
-  div.innerHTML = `<img src="https://image.tmdb.org/t/p/w300/${img}">`;
+function setHero(movie) {
+  hero.style.backgroundImage = `url(${IMG_URL + movie.backdrop_path})`;
+  hero.innerHTML = `
+    <div class="hero-content">
+      <h1>${movie.title}</h1>
+      <div class="buttons">
+        <button class="play">▶ Play</button>
+        <button class="info">Más info</button>
+      </div>
+    </div>
+  `;
+}
 
-  container.appendChild(div);
+function showMovies(movies) {
+  moviesContainer.innerHTML = "";
+
+  movies.forEach(movie => {
+    if (!movie.poster_path) return;
+
+    const div = document.createElement("div");
+    div.classList.add("poster");
+
+    div.innerHTML = `<img src="https://image.tmdb.org/t/p/w300${movie.poster_path}">`;
+
+    moviesContainer.appendChild(div);
+  });
+}
+
+search.addEventListener("input", () => {
+  const query = search.value;
+  if (query) {
+    getMovies(SEARCH_URL + query);
+  } else {
+    getMovies(POPULAR_URL);
+  }
 });
+
+getMovies(POPULAR_URL);
 </script>
 
 </body>
