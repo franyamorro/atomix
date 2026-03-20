@@ -3,101 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Netflix Clone Pro</title>
+  <title>Netflix Clone Pro+</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial;background:#141414;color:#fff}
 
-    body {
-      font-family: Arial, sans-serif;
-      background: #141414;
-      color: white;
-    }
+    header{position:fixed;top:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:15px 40px;background:rgba(0,0,0,.9);z-index:100}
+    .logo{color:#e50914;font-size:24px;font-weight:bold}
+    input{padding:8px;border-radius:4px;border:none}
 
-    header {
-      position: fixed;
-      top: 0;
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 40px;
-      background: rgba(0,0,0,0.9);
-      z-index: 100;
-    }
+    .hero{margin-top:60px;height:70vh;background-size:cover;background-position:center;display:flex;align-items:flex-end;padding:40px}
+    .hero h1{font-size:48px}
 
-    .logo {
-      color: #e50914;
-      font-size: 24px;
-      font-weight: bold;
-    }
+    .row{margin:20px}
+    .row h2{margin-bottom:10px}
+    .row-posters{display:flex;overflow-x:auto;gap:10px}
 
-    input {
-      padding: 8px;
-      border-radius: 4px;
-      border: none;
-      outline: none;
-    }
+    .poster{min-width:150px;height:225px;border-radius:5px;overflow:hidden;position:relative;cursor:pointer;transition:transform .3s}
+    .poster img{width:100%;height:100%;object-fit:cover}
+    .poster:hover{transform:scale(1.15)}
 
-    .hero {
-      margin-top: 60px;
-      height: 70vh;
-      background-size: cover;
-      background-position: center;
-      display: flex;
-      align-items: flex-end;
-      padding: 40px;
-    }
+    .overlay{position:absolute;bottom:0;width:100%;background:linear-gradient(transparent,rgba(0,0,0,.9));padding:10px;font-size:12px;opacity:0;transition:.3s}
+    .poster:hover .overlay{opacity:1}
 
-    .hero-content h1 {
-      font-size: 48px;
-      margin-bottom: 10px;
-    }
+    .fav{position:absolute;top:5px;right:5px;background:red;border:none;border-radius:50%;color:#fff;width:25px;height:25px;cursor:pointer}
 
-    .buttons button {
-      padding: 10px 20px;
-      margin-right: 10px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);display:none;justify-content:center;align-items:center;z-index:200}
+    .modal iframe{width:80%;height:60%}
 
-    .play { background: white; color: black; }
-    .info { background: rgba(109,109,110,0.7); color: white; }
-
-    .row {
-      margin: 20px;
-    }
-
-    .row h2 {
-      margin-bottom: 10px;
-    }
-
-    .row-posters {
-      display: flex;
-      overflow-x: auto;
-      gap: 10px;
-    }
-
-    .poster {
-      min-width: 150px;
-      height: 225px;
-      flex-shrink: 0;
-      border-radius: 5px;
-      overflow: hidden;
-      transition: transform 0.3s;
-    }
-
-    .poster img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .poster:hover {
-      transform: scale(1.15);
-    }
-
-    ::-webkit-scrollbar { display: none; }
+    ::-webkit-scrollbar{display:none}
   </style>
 </head>
 <body>
@@ -109,67 +43,113 @@
 
 <section class="hero" id="hero"></section>
 
-<section class="row">
-  <h2>Populares</h2>
-  <div class="row-posters" id="movies"></div>
-</section>
+<div id="rows"></div>
+
+<div class="modal" id="modal" onclick="closeModal()">
+  <iframe id="trailer" src="" frameborder="0" allowfullscreen></iframe>
+</div>
 
 <script>
-const API_KEY = "fb3f3ff8524699ce1075d2c77f1c7f88";
-const BASE_URL = "https://api.themoviedb.org/3";
-const IMG_URL = "https://image.tmdb.org/t/p/original";
-const SEARCH_URL = `${BASE_URL}/search/movie?api_key=${API_KEY}&query=`;
-const POPULAR_URL = `${BASE_URL}/movie/popular?api_key=${API_KEY}`;
+const API_KEY="fb3f3ff8524699ce1075d2c77f1c7f88";
+const BASE="https://api.themoviedb.org/3";
+const IMG="https://image.tmdb.org/t/p/w300";
 
-const moviesContainer = document.getElementById("movies");
-const hero = document.getElementById("hero");
-const search = document.getElementById("search");
+const categories=[
+  {name:"Populares",url:`${BASE}/movie/popular?api_key=${API_KEY}`},
+  {name:"Acción",url:`${BASE}/discover/movie?api_key=${API_KEY}&with_genres=28`},
+  {name:"Comedia",url:`${BASE}/discover/movie?api_key=${API_KEY}&with_genres=35`}
+];
 
-async function getMovies(url) {
-  const res = await fetch(url);
-  const data = await res.json();
-  showMovies(data.results);
-  setHero(data.results[0]);
+const rowsContainer=document.getElementById("rows");
+const hero=document.getElementById("hero");
+const search=document.getElementById("search");
+
+async function fetchData(url){
+  const res=await fetch(url);
+  return await res.json();
 }
 
-function setHero(movie) {
-  hero.style.backgroundImage = `url(${IMG_URL + movie.backdrop_path})`;
-  hero.innerHTML = `
-    <div class="hero-content">
-      <h1>${movie.title}</h1>
-      <div class="buttons">
-        <button class="play">▶ Play</button>
-        <button class="info">Más info</button>
-      </div>
-    </div>
-  `;
+function setHero(movie){
+  hero.style.backgroundImage=`url(https://image.tmdb.org/t/p/original${movie.backdrop_path})`;
+  hero.innerHTML=`<h1>${movie.title}</h1>`;
 }
 
-function showMovies(movies) {
-  moviesContainer.innerHTML = "";
+function createRow(title,movies){
+  const section=document.createElement("section");
+  section.classList.add("row");
 
-  movies.forEach(movie => {
-    if (!movie.poster_path) return;
+  section.innerHTML=`<h2>${title}</h2><div class="row-posters"></div>`;
 
-    const div = document.createElement("div");
+  const container=section.querySelector(".row-posters");
+
+  movies.forEach(m=>{
+    if(!m.poster_path)return;
+
+    const div=document.createElement("div");
     div.classList.add("poster");
 
-    div.innerHTML = `<img src="https://image.tmdb.org/t/p/w300${movie.poster_path}">`;
+    div.innerHTML=`
+      <img src="${IMG+m.poster_path}">
+      <button class="fav">❤</button>
+      <div class="overlay">
+        <p>${m.title}</p>
+        <p>⭐ ${m.vote_average}</p>
+      </div>
+    `;
 
-    moviesContainer.appendChild(div);
+    div.onclick=()=>openTrailer(m.id);
+
+    div.querySelector(".fav").onclick=(e)=>{
+      e.stopPropagation();
+      saveFav(m);
+    };
+
+    container.appendChild(div);
   });
+
+  rowsContainer.appendChild(section);
 }
 
-search.addEventListener("input", () => {
-  const query = search.value;
-  if (query) {
-    getMovies(SEARCH_URL + query);
-  } else {
-    getMovies(POPULAR_URL);
+async function loadAll(){
+  rowsContainer.innerHTML="";
+  for(const cat of categories){
+    const data=await fetchData(cat.url);
+    if(cat.name==="Populares")setHero(data.results[0]);
+    createRow(cat.name,data.results);
   }
+}
+
+async function openTrailer(id){
+  const data=await fetchData(`${BASE}/movie/${id}/videos?api_key=${API_KEY}`);
+  const video=data.results.find(v=>v.type==="Trailer");
+  if(video){
+    document.getElementById("modal").style.display="flex";
+    document.getElementById("trailer").src=`https://www.youtube.com/embed/${video.key}`;
+  }
+}
+
+function closeModal(){
+  document.getElementById("modal").style.display="none";
+  document.getElementById("trailer").src="";
+}
+
+function saveFav(movie){
+  let favs=JSON.parse(localStorage.getItem("favs"))||[];
+  favs.push(movie);
+  localStorage.setItem("favs",JSON.stringify(favs));
+  alert("Añadido a favoritos");
+}
+
+search.addEventListener("input",async()=>{
+  const q=search.value;
+  if(q){
+    const data=await fetchData(`${BASE}/search/movie?api_key=${API_KEY}&query=${q}`);
+    rowsContainer.innerHTML="";
+    createRow("Resultados",data.results);
+  }else loadAll();
 });
 
-getMovies(POPULAR_URL);
+loadAll();
 </script>
 
 </body>
